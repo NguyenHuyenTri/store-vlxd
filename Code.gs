@@ -50,7 +50,7 @@ function digest_(value){return Utilities.base64EncodeWebSafe(Utilities.computeDi
 function authKey_(){return digest_(PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD')||'');}
 function adminLogin(password){
  const secret=PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD');
- if(!secret||secret.length<16)throw new Error('Chưa cấu hình ADMIN_PASSWORD tối thiểu 16 ký tự trong Thuộc tính tập lệnh.');
+ if(!secret||secret.length<8)throw new Error('Chưa cấu hình ADMIN_PASSWORD tối thiểu 8 ký tự trong Thuộc tính tập lệnh.');
  const cache=CacheService.getScriptCache(),lock=LockService.getScriptLock();lock.waitLock(10000);
  try{
   const attempts=Number(cache.get('admin-attempts')||0);
