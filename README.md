@@ -1,3 +1,11 @@
+## Thông báo đơn mới trong quản trị
+
+- Chuông chỉ hiện sau khi đăng nhập. Tự lấy lại danh sách đơn khoảng 30 giây/lần khi phiên còn hiệu lực và website vẫn mở; trình duyệt có thể giảm tần suất khi chạy nền.
+- Badge đếm các đơn trạng thái Mới chưa đánh dấu đã đọc trong 200 đơn gần nhất. Đơn mới chờ xử lý toàn hệ thống hiển thị riêng ở phần tóm tắt. Khi mở chuông, hiển thị tối đa 10 đơn trạng thái Mới gần nhất.
+- Khi nhận ID đơn mới sau lần tải đầu, hiện thông báo trong trang và số chưa đọc trên tiêu đề tab. Lần tải đầu chỉ hiển thị số lượng, không phát hàng loạt thông báo cho các đơn cũ.
+- Bấm một thông báo để lọc đúng đơn. Có nút đánh dấu tất cả đã đọc; thao tác này không đổi trạng thái đơn trên Sheets. Chỉ lưu ID đã đọc trên trình duyệt, không lưu thông tin khách.
+- Đăng xuất/hết phiên dừng kiểm tra và xóa danh sách thông báo khỏi giao diện. Không gửi email, thông báo hệ điều hành hoặc thông báo khi website đã đóng. Không cần đổi Apps Script cho tính năng này.
+
 ## Ghi nhớ đăng nhập quản trị
 
 - Bật “Ghi nhớ đăng nhập trên thiết bị này” để lưu token và hạn hết phiên trên trình duyệt, tối đa 1 giờ theo phiên máy chủ hiện tại. Không lưu mật khẩu hoặc danh sách đơn.
