@@ -1,4 +1,60 @@
-# Kim Đào — Tiger, Sơn Đông
+# Kim Đào — GitHub → Netlify → Google Trang tính
+
+## Triển khai Netlify (cách khuyến nghị)
+
+Website lấy giao diện từ GitHub và dữ liệu từ Google Trang tính. Netlify tự build khi nhánh `main` được cập nhật. Apps Script chỉ làm máy chủ dữ liệu; không cần chép lại HTML khi sửa giao diện.
+
+### A. Cập nhật đầu nối Apps Script một lần
+
+1. Mở Apps Script đang kết nối bảng tính. Thay toàn bộ nội dung file mã `.gs` bằng **Code.gs mới trong repository này**. Mã mới có hàm `doPost` ở cuối.
+2. Giữ nguyên `SPREADSHEET_ID`. Để sử dụng quản trị, đặt `ADMIN_PASSWORD` trong Thuộc tính tập lệnh (16–256 ký tự). Không đưa mật khẩu vào HTML, GitHub hoặc chat.
+3. Lưu → **Triển khai → Quản lý bản triển khai → bút chì → Phiên bản mới → Triển khai**. Chạy dưới danh tính Tôi và cho phép Bất kỳ ai truy cập. Giữ bảng tính riêng tư.
+4. Giữ URL `/exec`. Không cần thay file HTML trong Apps Script cho việc triển khai Netlify; website Netlify dùng `Index.html` từ GitHub.
+
+### B. Kết nối Netlify với repository
+
+Nếu đã có dự án gắn với repository này, dùng dự án đó, không tạo bản sao.
+
+- Repository: repository Kim Đào hiện tại, nhánh `main`.
+- Base directory: để trống.
+- Build command: `npm run build`.
+- Publish directory: `public`.
+- Functions directory: `netlify/functions`.
+- Thêm biến môi trường **APPS_SCRIPT_URL** bằng toàn bộ URL Apps Script `/exec` của bạn. Biến cần khả dụng ở runtime Functions (nếu giao diện có chọn phạm vi). Không thêm mã bảng tính hoặc mật khẩu quản trị vào source.
+- Bấm Deploy. Các giá trị mặc định đã khai báo trong `netlify.toml`.
+- Nếu thêm/sửa biến môi trường sau deploy, triển khai lại để Functions nhận cấu hình mới.
+
+### C. Kiểm tra sau triển khai
+
+1. Chờ Netlify báo Published, mở URL `https://…netlify.app`.
+2. Xem sản phẩm, thử giỏ hàng và gửi một đơn bằng dữ liệu giả. Xác nhận dòng mới trong `DonHang`.
+3. Đăng nhập Quản trị, xem đơn, đổi trạng thái đơn thử, sửa sản phẩm rồi đối chiếu trong Sheets.
+4. Nếu hiện “Cần cập nhật Code.gs”, làm lại bước A và kiểm tra đúng URL `/exec`. Nếu hiện “Chưa cấu hình APPS_SCRIPT_URL”, kiểm tra biến runtime rồi deploy lại. Nếu bị yêu cầu đăng nhập Google, kiểm tra đối tượng truy cập bản Apps Script.
+5. Các lần sửa `Index.html`, Functions hoặc cấu hình trên nhánh `main` sau này sẽ được Netlify tự triển khai. Kiểm tra 16 bài test hiện tại và build chạy trong mỗi deploy. Thay đổi logic bên trong `Code.gs` vẫn cần cập nhật Apps Script thủ công; dữ liệu sản phẩm/đơn cập nhật trực tiếp không cần deploy.
+
+### Cấu trúc và bảo vệ dữ liệu
+
+- `Index.html`: một giao diện dùng chung, tự chọn API Netlify khi chạy trên Netlify và `google.script.run` khi chạy trong Apps Script.
+- `netlify/functions/rpc.mjs`: API cùng tên miền `/api/rpc`, chỉ chuyển tiếp nghiệp vụ được cho phép đến URL Google cấu hình trên máy chủ. Không cho khách chọn đích proxy. Timeout 25 giây; dữ liệu API không được cache.
+- `Code.gs`: kiểm tra phiên quản trị, đọc/ghi Sheets, tính lại giá và khóa khi ghi. Hàm `doPost` không cho gọi các helper hoặc hàm khởi tạo.
+- `scripts/build.mjs`: tạo `public/index.html`; không đóng gói dữ liệu hoặc cấu hình riêng vào HTML.
+- Mật khẩu và token không lưu trong HTML/GitHub hoặc localStorage. Token phiên chỉ trong bộ nhớ tab; thông tin đơn quản trị xóa khỏi giao diện khi đăng xuất. Không ghi nội dung đơn hoặc mật khẩu vào log Functions.
+- Endpoint Google vẫn là public để nhận yêu cầu như bản Apps Script trước, nhưng nghiệp vụ quản trị luôn kiểm tra phiên. Chưa có CAPTCHA cho đơn công khai. Apps Script/Netlify đều có hạn mức dịch vụ.
+
+## Chạy kiểm tra
+
+Yêu cầu Node.js 20 trở lên (Netlify dùng 22), không có dependency ứng dụng cần cài:
+
+```sh
+npm test
+npm run build
+```
+
+Kiểm tra tự động dùng dữ liệu giả. Chưa thay thế kiểm tra trên Netlify và Sheets thật sau khi chủ tài khoản cấu hình.
+
+---
+
+## Cài đặt Apps Script độc lập (tùy chọn)
 
 Website dùng Google Apps Script và Google Trang tính. Bản quản trị cần được chủ tài khoản cập nhật vào Apps Script và triển khai phiên bản mới. Không có mật khẩu hoặc khóa riêng trong repository.
 

@@ -105,3 +105,19 @@ function adminSaveProduct(token,input){
   return true;
  }finally{lock.releaseLock();}
 }
+
+// Cầu nối Netlify. Chỉ cho phép các nghiệp vụ công khai đã định nghĩa;
+// các nghiệp vụ quản trị vẫn kiểm tra phiên tại từng hàm.
+function doPost(event){
+ try{
+  const raw=event&&event.postData&&event.postData.contents;
+  if(typeof raw!=='string'||raw.length>65536)throw new Error('Yêu cầu không hợp lệ.');
+  const input=JSON.parse(raw);
+  const methods={getCatalog:{fn:getCatalog,count:0},placeOrder:{fn:placeOrder,count:1},adminLogin:{fn:adminLogin,count:1},adminLogout:{fn:adminLogout,count:1},adminSnapshot:{fn:adminSnapshot,count:1},adminSetStatus:{fn:adminSetStatus,count:4},adminSaveProduct:{fn:adminSaveProduct,count:2}};
+  if(!input||!Object.prototype.hasOwnProperty.call(methods,input.method))throw new Error('Nghiệp vụ không được hỗ trợ.');
+  const route=methods[input.method];
+  if(!Array.isArray(input.args)||input.args.length!==route.count)throw new Error('Tham số không hợp lệ.');
+  return json_({apiVersion:1,ok:true,data:route.fn.apply(null,input.args)});
+ }catch(error){return json_({apiVersion:1,ok:false,error:String(error.message||'Không xử lý được yêu cầu.')});}
+}
+function json_(value){return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON);}

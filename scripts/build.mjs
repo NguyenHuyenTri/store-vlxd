@@ -1,0 +1,11 @@
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
+import vm from 'node:vm';
+const source = await readFile(new URL('../Index.html',import.meta.url),'utf8');
+const script=source.match(/<script>([\s\S]*)<\/script>/)?.[1];
+if(!script)throw new Error('Missing client script');
+new vm.Script(script);
+if(!source.includes('/api/rpc'))throw new Error('Missing Netlify API client');
+await mkdir(new URL('../public/',import.meta.url),{recursive:true});
+await writeFile(new URL('../public/index.html',import.meta.url),source);
+await writeFile(new URL('../public/robots.txt',import.meta.url),'User-agent: *\nAllow: /\nDisallow: /api/\n');
+console.log('Built public/index.html; Netlify will deploy API functions separately.');
