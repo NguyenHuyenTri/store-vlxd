@@ -1,5 +1,6 @@
 // Đặt SPREADSHEET_ID trong Cài đặt dự án → Thuộc tính tập lệnh.
 const PRODUCT_HEADERS = ['MaHang','TenSanPham','Hang','DanhMuc','DonViTinh','GiaBan','TonKho','HienThi'];
+const PACK_HEADERS = ['VienMoiHop','HopMoiThung','AnhSanPham'];
 const ORDER_HEADERS = ['MaDon','NgayTao','KhachHang','DienThoai','DiaChi','GhiChu','ChiTietJSON','TamTinh','TrangThai'];
 function db_(){ return SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID')); }
 // Chạy thủ công từ trình soạn thảo. Không xóa hoặc ghi đè dữ liệu đã có.
@@ -9,6 +10,7 @@ function setupKimDao(){
     const sheet=ss.getSheetByName(name)||ss.insertSheet(name);
     if(sheet.getLastRow()===0){ sheet.appendRow(headers);sheet.setFrozenRows(1); }
     else checkHeaders_(sheet,headers);
+    if(name==='SanPham')ensurePackColumns_(sheet);
   });
 }
 function checkHeaders_(sheet,headers){
@@ -16,10 +18,30 @@ function checkHeaders_(sheet,headers){
   if(headers.some((h,i)=>actual[i]!==h))throw new Error('Sai cấu trúc trang '+sheet.getName()+'. Vui lòng kiểm tra hàng tiêu đề.');
 }
 function doGet(){return HtmlService.createHtmlOutputFromFile('Index').setTitle('Kim Đào | Đá cắt & Nhám');}
+function ensurePackColumns_(sh){
+ const existing=sh.getRange(1,9,1,3).getValues()[0];
+ if(existing.some((value,i)=>value!==''&&value!==PACK_HEADERS[i]))throw new Error('Cột I–K đang có dữ liệu khác. Vui lòng kiểm tra trước khi thêm quy cách và ảnh.');
+ sh.getRange(1,9,1,3).setValues([PACK_HEADERS]);
+}
+function packValues_(unit,perBox,perCarton){
+ const isPiece=String(unit).trim().toLowerCase()==='viên';
+ if(!isPiece)return {perBox:0,perCarton:0};
+ const box=perBox===''||perBox===undefined||perBox===null?100:Number(perBox);
+ const carton=perCarton===''||perCarton===undefined||perCarton===null?0:Number(perCarton);
+ if(!Number.isInteger(box)||box<1||box>100000||![0,8,10].includes(carton))throw new Error('Quy cách không hợp lệ: số viên/hộp phải dương; số hộp/thùng là 8 hoặc 10 (0 nếu chưa cấu hình).');
+ return {perBox:box,perCarton:carton};
+}
+function imageLink_(value){
+ const url=String(value||'').trim();
+ if(url.length>2000||(url&&!/^https:\/\/[A-Za-z0-9.-]+(?::443)?(?:[/?#][^\s<>"']*)?$/.test(url)))throw new Error('Link ảnh phải là địa chỉ HTTPS hợp lệ.');
+ return url;
+}
+function productFromRow_(r){
+ const pack=packValues_(r[4],r[8],r[9]);
+ return {id:String(r[0]),name:String(r[1]),brand:String(r[2]),cat:String(r[3]),unit:String(r[4]),price:Number(r[5]),stock:Number(r[6]),visible:r[7]===true,...pack,imageUrl:imageLink_(r[10]),packingVersion:1,version:digest_(JSON.stringify(r))};
+}
 function getCatalog(){
- const sh=db_().getSheetByName('SanPham');if(!sh)throw new Error('Chưa chạy setupKimDao.');checkHeaders_(sh,PRODUCT_HEADERS);
- if(sh.getLastRow()<2)return [];
- return sh.getRange(2,1,sh.getLastRow()-1,8).getValues().filter(r=>r[0]&&r[7]===true).map(r=>({id:String(r[0]),name:String(r[1]),brand:String(r[2]),cat:String(r[3]),unit:String(r[4]),price:Number(r[5]),available:Number(r[6])>0})).filter(p=>Number.isFinite(p.price)&&p.price>=0);
+ return productRows_().rows.filter(r=>r[0]&&r[7]===true).map(productFromRow_).filter(p=>Number.isSafeInteger(p.price)&&p.price>=0).map(p=>({id:p.id,name:p.name,brand:p.brand,cat:p.cat,unit:p.unit,price:p.price,available:p.stock>0,perBox:p.perBox,perCarton:p.perCarton,imageUrl:p.imageUrl,packingVersion:1}));
 }
 function text_(value,max,required){const s=String(value||'').trim();if((required&&!s)||s.length>max)throw new Error('Thông tin liên hệ không hợp lệ.');return s;}
 function safeCell_(s){return /^[=+@-]/.test(s)?"'"+s:s;}
@@ -33,11 +55,17 @@ function placeOrder(input){
   const sh=db_().getSheetByName('DonHang');checkHeaders_(sh,ORDER_HEADERS);
   const id='KD-'+key; // Mã ổn định để thử lại không tạo đơn trùng.
   if(sh.getLastRow()>1){const found=sh.getRange(2,1,sh.getLastRow()-1,1).createTextFinder(id).matchEntireCell(true).findNext();if(found)return {id,duplicate:true};}
-  const catalog=getCatalog(),seen={};let total=0;
+  const catalog=productRows_().rows.filter(r=>r[0]&&r[7]===true).map(productFromRow_),seen={},needed={};let total=0;
   const items=input.items.map(i=>{
-   const p=catalog.find(p=>p.id===i.id),q=Number(i.quantity);
-   if(!p||!p.available||seen[i.id]||!Number.isInteger(q)||q<1||q>99999)throw new Error('Sản phẩm hoặc số lượng không hợp lệ. Vui lòng tải lại danh mục.');
-   seen[i.id]=true;total+=p.price*q;return {id:p.id,name:p.name,unit:p.unit,quantity:q,price:p.price};
+   const p=catalog.find(p=>p.id===i.id),q=Number(i.quantity),saleUnit=i.saleUnit||'base';
+   if(!p||!Number.isInteger(q)||q<1||q>99999||!['base','box','carton'].includes(saleUnit))throw new Error('Sản phẩm hoặc số lượng không hợp lệ. Vui lòng tải lại danh mục.');
+   const key=p.id+'~'+saleUnit;
+   const factor=saleUnit==='base'?1:saleUnit==='box'?p.perBox:p.perBox*p.perCarton;
+   if(seen[key]||!Number.isSafeInteger(factor)||factor<1||!Number.isSafeInteger(p.price)||p.price<0)throw new Error('Đơn vị bán chưa được cấu hình hoặc sản phẩm bị lặp.');
+   seen[key]=true;const baseQuantity=q*factor;needed[p.id]=(needed[p.id]||0)+baseQuantity;
+   if(!Number.isSafeInteger(baseQuantity)||needed[p.id]>p.stock)throw new Error('Số lượng '+p.name+' vượt tồn kho hiện có. Vui lòng giảm số lượng hoặc liên hệ cửa hàng.');
+   const price=p.price*factor;total+=price*q;
+   return {id:p.id,name:p.name,unit:saleUnit==='base'?p.unit:saleUnit==='box'?'Hộp':'Thùng',quantity:q,price,saleUnit,unitFactor:factor,baseQuantity,baseUnit:p.unit};
   });
   if(!Number.isSafeInteger(total)||total<0)throw new Error('Tổng tiền không hợp lệ.');
   sh.appendRow([id,new Date(),safeCell_(customer),safeCell_(phone),safeCell_(address),safeCell_(note),JSON.stringify(items),total,'Mới']);
@@ -65,12 +93,12 @@ function requireAdmin_(token){
  if(CacheService.getScriptCache().get('session-'+digest_(token))!==authKey_())throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
 }
 function adminLogout(token){requireAdmin_(token);CacheService.getScriptCache().remove('session-'+digest_(token));return true;}
-function productRows_(){const sh=db_().getSheetByName('SanPham');checkHeaders_(sh,PRODUCT_HEADERS);return {sh,rows:sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,8).getValues():[]};}
+function productRows_(){const sh=db_().getSheetByName('SanPham');checkHeaders_(sh,PRODUCT_HEADERS);const extra=sh.getRange(1,9,1,3).getValues()[0];if(extra.some((v,i)=>v!==''&&v!==PACK_HEADERS[i]))throw new Error('Cột I–K không đúng cấu trúc quy cách/ảnh.');return {sh,rows:sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,11).getValues():[]};}
 function adminSnapshot(token){
  requireAdmin_(token);const p=productRows_(),sh=db_().getSheetByName('DonHang');checkHeaders_(sh,ORDER_HEADERS);
  const all=sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,9).getValues():[];
  const stats={count:all.length,pending:all.filter(r=>r[8]==='Mới').length,completedValue:all.filter(r=>r[8]==='Hoàn tất').reduce((s,r)=>s+(Number(r[7])||0),0)};
- return {stats,products:p.rows.filter(r=>r[0]).map(r=>({id:String(r[0]),name:String(r[1]),brand:String(r[2]),cat:String(r[3]),unit:String(r[4]),price:Number(r[5]),stock:Number(r[6]),visible:r[7]===true,version:digest_(JSON.stringify(r))})),orders:all.slice(-200).reverse().map(r=>{let items=[];try{items=JSON.parse(r[6]);if(!Array.isArray(items))items=[];}catch{}return {id:String(r[0]),date:r[1] instanceof Date?r[1].toISOString():String(r[1]),customer:String(r[2]),phone:String(r[3]),address:String(r[4]),note:String(r[5]),items,total:Number(r[7]),status:String(r[8])};})};
+ return {stats,packaging:true,products:p.rows.filter(r=>r[0]).map(productFromRow_),orders:all.slice(-200).reverse().map(r=>{let items=[];try{items=JSON.parse(r[6]);if(!Array.isArray(items))items=[];}catch{}return {id:String(r[0]),date:r[1] instanceof Date?r[1].toISOString():String(r[1]),customer:String(r[2]),phone:String(r[3]),address:String(r[4]),note:String(r[5]),items,total:Number(r[7]),status:String(r[8])};})};
 }
 function adminSetStatus(token,id,expected,status){
  requireAdmin_(token);const statuses=['Mới','Đã xác nhận','Đang giao','Hoàn tất','Đã hủy'];
@@ -97,10 +125,13 @@ function adminSaveProduct(token,input){
  try{
   const data=productRows_(),matches=data.rows.map((r,i)=>({r,i})).filter(x=>String(x.r[0])===id);
   if(matches.length>1)throw new Error('Mã hàng bị trùng trong bảng tính. Vui lòng sửa trực tiếp.');
-  const values=[id,safeCell_(name),safeCell_(brand),safeCell_(cat),safeCell_(unit),price,stock,input.visible];
+  const previous=matches.length?matches[0].r:[];
+  const pack=packValues_(unit,input.perBox===undefined?previous[8]:input.perBox,input.perCarton===undefined?previous[9]:input.perCarton),imageUrl=imageLink_(input.imageUrl===undefined?previous[10]:input.imageUrl);
+  ensurePackColumns_(data.sh);
+  const values=[id,safeCell_(name),safeCell_(brand),safeCell_(cat),safeCell_(unit),price,stock,input.visible,pack.perBox,pack.perCarton,imageUrl];
   if(matches.length){
    const m=matches[0];if(!input.version||digest_(JSON.stringify(m.r))!==input.version)throw new Error('Sản phẩm đã thay đổi. Bấm Làm mới và sửa lại.');
-   data.sh.getRange(m.i+2,1,1,8).setValues([values]);
+   data.sh.getRange(m.i+2,1,1,11).setValues([values]);
   }else{if(input.version)throw new Error('Sản phẩm đã bị xóa. Bấm Làm mới.');data.sh.appendRow(values);}
   return true;
  }finally{lock.releaseLock();}

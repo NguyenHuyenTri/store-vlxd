@@ -1,3 +1,21 @@
+## Mới: quy đổi hộp/thùng và ảnh sản phẩm
+
+- Với đá, đơn vị gốc là **Viên**, **1 hộp = 100 viên**. Mỗi sản phẩm chọn **8 hoặc 10 hộp/thùng**; chưa cấu hình thì không bán theo thùng. Giá và tồn kho luôn tính theo đơn vị gốc. Giá hộp/thùng được nhân từ giá viên, chưa có giá sỉ riêng.
+- Khách chọn Viên/Hộp/Thùng trước khi thêm giỏ. Đơn lưu số lượng, đơn vị đã chọn, hệ số quy đổi và tổng số viên. Đơn cũ vẫn đọc được. Máy chủ cộng tất cả dòng của cùng mã hàng để kiểm tra tồn kho, tự tính giá, không tin hệ số/giá do trình duyệt gửi.
+- Gửi đơn hoặc đổi trạng thái **chưa tự trừ/hoàn kho**. Vì chưa giữ chỗ, các đơn đồng thời vẫn cần cửa hàng xác nhận khả năng giao.
+- Trong Quản trị → Sửa sản phẩm, nhập **link ảnh HTTPS**. Google Drive: mở từng ảnh → Chia sẻ → Bất kỳ ai có đường liên kết → Người xem → Sao chép đường liên kết. Dùng link file ảnh, không dùng link thư mục/album. Giao diện chuyển link Drive sang ảnh thumbnail, có thông báo thay thế nếu ảnh riêng tư hoặc không tải được. Có thể dùng link HTTPS trực tiếp tới ảnh nếu Drive chặn tải.
+
+### Áp dụng đầu nối mới
+
+1. Sao lưu bảng tính, thay **Code.gs** trong Apps Script bằng mã mới từ repository. Giữ nguyên `SPREADSHEET_ID` và `ADMIN_PASSWORD`.
+2. Chạy hàm **setupKimDao** để thêm ba cột cuối trang `SanPham`: **I: VienMoiHop**, **J: HopMoiThung**, **K: AnhSanPham**. Không ghi đè dữ liệu hay thay đổi các cột A–H. Nếu I–K đã có nội dung khác, hàm báo lỗi để tránh ghi đè.
+3. Lưu → Triển khai → Quản lý bản triển khai → Chỉnh sửa → Phiên bản mới → Triển khai, giữ URL `/exec`.
+4. Tải lại website Netlify → Quản trị → Sửa sản phẩm: đơn vị Viên, số viên/hộp 100, số hộp/thùng 8 hoặc 10, link ảnh. Với hàng khác (Tờ/Cuộn…), không bật quy đổi hộp/thùng.
+5. Có thể sửa trực tiếp I–K trên Sheets: `100`, `8` hoặc `10`, link ảnh HTTPS. Hộp/thùng chưa cấu hình: cột J trống hoặc 0. Các dòng cũ có đơn vị Viên mặc định 100 viên/hộp, chưa mặc định số hộp/thùng.
+6. Netlify tự triển khai giao diện từ GitHub. Khi đầu nối chưa cập nhật, giao diện vẫn bán theo đơn vị cũ và chưa bật cấu hình hộp/thùng/ảnh, tránh gửi đơn quy đổi sai.
+
+---
+
 # Kim Đào — GitHub → Netlify → Google Trang tính
 
 ## Triển khai Netlify (cách khuyến nghị)
@@ -30,7 +48,7 @@ Nếu đã có dự án gắn với repository này, dùng dự án đó, không
 2. Xem sản phẩm, thử giỏ hàng và gửi một đơn bằng dữ liệu giả. Xác nhận dòng mới trong `DonHang`.
 3. Đăng nhập Quản trị, xem đơn, đổi trạng thái đơn thử, sửa sản phẩm rồi đối chiếu trong Sheets.
 4. Nếu hiện “Cần cập nhật Code.gs”, làm lại bước A và kiểm tra đúng URL `/exec`. Nếu hiện “Chưa cấu hình APPS_SCRIPT_URL”, kiểm tra biến runtime rồi deploy lại. Nếu bị yêu cầu đăng nhập Google, kiểm tra đối tượng truy cập bản Apps Script.
-5. Các lần sửa `Index.html`, Functions hoặc cấu hình trên nhánh `main` sau này sẽ được Netlify tự triển khai. Kiểm tra 16 bài test hiện tại và build chạy trong mỗi deploy. Thay đổi logic bên trong `Code.gs` vẫn cần cập nhật Apps Script thủ công; dữ liệu sản phẩm/đơn cập nhật trực tiếp không cần deploy.
+5. Các lần sửa `Index.html`, Functions hoặc cấu hình trên nhánh `main` sau này sẽ được Netlify tự triển khai. Các bài kiểm tra tự động và build chạy trong mỗi deploy. Thay đổi logic bên trong `Code.gs` vẫn cần cập nhật Apps Script thủ công; dữ liệu sản phẩm/đơn cập nhật trực tiếp không cần deploy.
 
 ### Cấu trúc và bảo vệ dữ liệu
 
