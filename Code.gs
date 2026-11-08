@@ -40,8 +40,9 @@ function productFromRow_(r){
  const pack=packValues_(r[4],r[8],r[9]);
  return {id:String(r[0]),name:String(r[1]),brand:String(r[2]),cat:String(r[3]),unit:String(r[4]),price:Number(r[5]),stock:Number(r[6]),visible:r[7]===true,...pack,imageUrl:imageLink_(r[10]),packingVersion:1,version:digest_(JSON.stringify(r))};
 }
+function uniqueProducts_(rows){const seen={};for(const r of rows){if(!r[0])continue;const id=String(r[0]);if(Object.prototype.hasOwnProperty.call(seen,id))throw new Error('Mã sản phẩm bị trùng: '+id+'. Mỗi sản phẩm cần một mã riêng trong SanPham.');seen[id]=true;}return rows;}
 function getCatalog(){
- return productRows_().rows.filter(r=>r[0]&&r[7]===true).map(productFromRow_).filter(p=>Number.isSafeInteger(p.price)&&p.price>=0).map(p=>({id:p.id,name:p.name,brand:p.brand,cat:p.cat,unit:p.unit,price:p.price,available:p.stock>0,perBox:p.perBox,perCarton:p.perCarton,imageUrl:p.imageUrl,packingVersion:1}));
+ return uniqueProducts_(productRows_().rows).filter(r=>r[0]&&r[7]===true).map(productFromRow_).filter(p=>Number.isSafeInteger(p.price)&&p.price>=0).map(p=>({id:p.id,name:p.name,brand:p.brand,cat:p.cat,unit:p.unit,price:p.price,available:p.stock>0,perBox:p.perBox,perCarton:p.perCarton,imageUrl:p.imageUrl,packingVersion:1}));
 }
 function text_(value,max,required){const s=String(value||'').trim();if((required&&!s)||s.length>max)throw new Error('Thông tin liên hệ không hợp lệ.');return s;}
 function safeCell_(s){return /^[=+@-]/.test(s)?"'"+s:s;}
@@ -55,7 +56,7 @@ function placeOrder(input){
   const sh=db_().getSheetByName('DonHang');checkHeaders_(sh,ORDER_HEADERS);
   const id='KD-'+key; // Mã ổn định để thử lại không tạo đơn trùng.
   if(sh.getLastRow()>1){const found=sh.getRange(2,1,sh.getLastRow()-1,1).createTextFinder(id).matchEntireCell(true).findNext();if(found)return {id,duplicate:true};}
-  const catalog=productRows_().rows.filter(r=>r[0]&&r[7]===true).map(productFromRow_),seen={},needed={};let total=0;
+  const catalog=uniqueProducts_(productRows_().rows).filter(r=>r[0]&&r[7]===true).map(productFromRow_),seen={},needed={};let total=0;
   const items=input.items.map(i=>{
    const p=catalog.find(p=>p.id===i.id),q=Number(i.quantity),saleUnit=i.saleUnit||'base';
    if(!p||!Number.isInteger(q)||q<1||q>99999||!['base','box','carton'].includes(saleUnit))throw new Error('Sản phẩm hoặc số lượng không hợp lệ. Vui lòng tải lại danh mục.');
