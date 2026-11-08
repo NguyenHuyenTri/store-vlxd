@@ -1,3 +1,9 @@
+## Ghi nhớ đăng nhập quản trị
+
+- Bật “Ghi nhớ đăng nhập trên thiết bị này” để lưu token và hạn hết phiên trên trình duyệt, tối đa 1 giờ theo phiên máy chủ hiện tại. Không lưu mật khẩu hoặc danh sách đơn.
+- Bỏ chọn để chỉ giữ phiên trong tab hiện tại. Mỗi lần khôi phục đều xác thực lại với máy chủ; không tự kéo dài hạn phiên. Google Cache có thể làm phiên hết hạn sớm.
+- Đăng xuất xóa phiên trên thiết bị và gửi yêu cầu thu hồi token đến máy chủ; tab khác đang dùng phiên nhớ sẽ thoát. Không cần sửa Apps Script cho tính năng ghi nhớ này.
+
 ## Mới: quy đổi hộp/thùng và ảnh sản phẩm
 
 - Với đá, đơn vị gốc là **Viên**, **1 hộp = 100 viên**. Mỗi sản phẩm chọn **8 hoặc 10 hộp/thùng**; chưa cấu hình thì không bán theo thùng. Giá và tồn kho luôn tính theo đơn vị gốc. Giá hộp/thùng được nhân từ giá viên, chưa có giá sỉ riêng.
@@ -56,7 +62,7 @@ Nếu đã có dự án gắn với repository này, dùng dự án đó, không
 - `netlify/functions/rpc.mjs`: API cùng tên miền `/api/rpc`, chỉ chuyển tiếp nghiệp vụ được cho phép đến URL Google cấu hình trên máy chủ. Không cho khách chọn đích proxy. Timeout 25 giây; dữ liệu API không được cache.
 - `Code.gs`: kiểm tra phiên quản trị, đọc/ghi Sheets, tính lại giá và khóa khi ghi. Hàm `doPost` không cho gọi các helper hoặc hàm khởi tạo.
 - `scripts/build.mjs`: tạo `public/index.html`; không đóng gói dữ liệu hoặc cấu hình riêng vào HTML.
-- Mật khẩu và token không lưu trong HTML/GitHub hoặc localStorage. Token phiên chỉ trong bộ nhớ tab; thông tin đơn quản trị xóa khỏi giao diện khi đăng xuất. Không ghi nội dung đơn hoặc mật khẩu vào log Functions.
+- Mật khẩu không lưu trong HTML/GitHub hoặc localStorage. Token và hạn phiên có thể lưu trên thiết bị khi bật ghi nhớ; thông tin đơn quản trị xóa khỏi giao diện khi đăng xuất. Không ghi nội dung đơn hoặc mật khẩu vào log Functions.
 - Endpoint Google vẫn là public để nhận yêu cầu như bản Apps Script trước, nhưng nghiệp vụ quản trị luôn kiểm tra phiên. Chưa có CAPTCHA cho đơn công khai. Apps Script/Netlify đều có hạn mức dịch vụ.
 
 ## Chạy kiểm tra
@@ -112,7 +118,7 @@ Thử sản phẩm ẩn/hết hàng; giỏ trống; thay số lượng; gửi l�
 4. Lưu → **Triển khai → Quản lý bản triển khai → bút chì → Phiên bản mới → Triển khai**. Giữ bản triển khai cũ để giữ nguyên link `/exec`.
 5. Mở link `/exec`, bấm **Quản trị**, nhập mật khẩu đã đặt.
 6. Thử xem đơn; thay trạng thái của đơn thử; thêm một sản phẩm thử ở trạng thái ẩn; kiểm tra dữ liệu trong Sheets. Khách chưa đăng nhập không được xem đơn hoặc tồn kho chính xác.
-7. Đăng xuất sau khi dùng máy chung. Phiên nằm trong bộ nhớ tab, tối đa 1 giờ và có thể hết hạn sớm do Google Cache. Tải lại trang sẽ cần đăng nhập lại. Đổi hoặc xóa `ADMIN_PASSWORD` sẽ vô hiệu hóa phiên cũ. Giới hạn 10 lần đăng nhập trong 5 phút dùng chung cho ứng dụng.
+7. Đăng xuất sau khi dùng máy chung. Phiên tối đa 1 giờ và có thể hết hạn sớm do Google Cache. Tải lại trang sẽ kiểm tra và khôi phục phiên đã lưu nếu còn hợp lệ. Đổi hoặc xóa `ADMIN_PASSWORD` sẽ vô hiệu hóa phiên cũ. Giới hạn 10 lần đăng nhập trong 5 phút dùng chung cho ứng dụng.
 
 ### Quy tắc tồn kho và cập nhật đồng thời
 
