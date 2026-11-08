@@ -7,7 +7,7 @@ Website lấy giao diện từ GitHub và dữ liệu từ Google Trang tính. N
 ### A. Cập nhật đầu nối Apps Script một lần
 
 1. Mở Apps Script đang kết nối bảng tính. Thay toàn bộ nội dung file mã `.gs` bằng **Code.gs mới trong repository này**. Mã mới có hàm `doPost` ở cuối.
-2. Giữ nguyên `SPREADSHEET_ID`. Để sử dụng quản trị, đặt `ADMIN_PASSWORD` trong Thuộc tính tập lệnh (16–256 ký tự). Không đưa mật khẩu vào HTML, GitHub hoặc chat.
+2. Giữ nguyên `SPREADSHEET_ID`. Để sử dụng quản trị, đặt `ADMIN_PASSWORD` trong Thuộc tính tập lệnh (8–256 ký tự). Không đưa mật khẩu vào HTML, GitHub hoặc chat.
 3. Lưu → **Triển khai → Quản lý bản triển khai → bút chì → Phiên bản mới → Triển khai**. Chạy dưới danh tính Tôi và cho phép Bất kỳ ai truy cập. Giữ bảng tính riêng tư.
 4. Giữ URL `/exec`. Không cần thay file HTML trong Apps Script cho việc triển khai Netlify; website Netlify dùng `Index.html` từ GitHub.
 
@@ -90,7 +90,7 @@ Thử sản phẩm ẩn/hết hàng; giỏ trống; thay số lượng; gửi l�
 
 1. Sao lưu bảng tính bằng **Tệp → Tạo bản sao** trước khi thay đổi.
 2. Mở Apps Script đang dùng. Thay toàn bộ nội dung file mã `.gs` bằng `Code.gs` mới. Thay toàn bộ nội dung file HTML bằng `Index.html` mới. Tên HTML trong danh sách phải là **Index.html**, không phải Index.html.html. Nếu thêm file mới, chỉ nhập tên `Index`.
-3. Giữ nguyên thuộc tính `SPREADSHEET_ID`. Thêm thuộc tính tập lệnh `ADMIN_PASSWORD` là mật khẩu riêng dài ít nhất 16 ký tự, tối đa 256 ký tự. Chọn mật khẩu ngẫu nhiên, không dùng lại mật khẩu Google. Không dán mật khẩu vào mã, GitHub hoặc chat. Không có mật khẩu mặc định.
+3. Giữ nguyên thuộc tính `SPREADSHEET_ID`. Thêm thuộc tính tập lệnh `ADMIN_PASSWORD` là mật khẩu riêng dài ít nhất 8 ký tự, tối đa 256 ký tự. Chọn mật khẩu ngẫu nhiên, không dùng lại mật khẩu Google. Không dán mật khẩu vào mã, GitHub hoặc chat. Không có mật khẩu mặc định.
 4. Lưu → **Triển khai → Quản lý bản triển khai → bút chì → Phiên bản mới → Triển khai**. Giữ bản triển khai cũ để giữ nguyên link `/exec`.
 5. Mở link `/exec`, bấm **Quản trị**, nhập mật khẩu đã đặt.
 6. Thử xem đơn; thay trạng thái của đơn thử; thêm một sản phẩm thử ở trạng thái ẩn; kiểm tra dữ liệu trong Sheets. Khách chưa đăng nhập không được xem đơn hoặc tồn kho chính xác.
